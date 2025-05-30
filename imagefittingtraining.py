@@ -6,6 +6,7 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 import numpy as np
 from PIL import Image
+import matplotlib.pyplot as plt
 
 '''class ToyImageRegressionDataset(Dataset):
     def __init__(self, num_samples=1000):
@@ -21,6 +22,14 @@ from PIL import Image
 dataset = ToyImageRegressionDataset(num_samples=1000)
 dataloader = DataLoader(dataset, batch_size=64, shuffle=True)
 '''
+
+def generate_image_from_model(model, width, height):
+    model.eval()
+    coords = [(x / width, y / height) for y in range(height) for x in range(width)]
+    coords_tensor = torch.tensor(coords, dtype=torch.float32)
+    with torch.no_grad():
+        preds = model(coords_tensor).view(height, width).cpu().numpy()
+    return preds
 
 class ImageRegressionDataset(Dataset):
     def __init__(self, image_path):
@@ -56,9 +65,10 @@ model = HybridImageFittingModel()
 criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=0.01)
 
-epochs = 20
+epochs = 100
 
 for epoch in range(epochs):
+    model.train()
     running_loss = 0.0
     for inputs, targets in dataloader:
         targets = targets.view(-1, 1).float()
@@ -67,8 +77,15 @@ for epoch in range(epochs):
         loss = criterion(outputs, targets)
         loss.backward()
         optimizer.step()
-
         running_loss += loss.item()
 
     epoch_loss = running_loss / len(dataset)
-    print(f"Epoch {epoch+1}/{epochs}, Loss: {epoch_loss:.6f}")
+    if (epoch + 1)%10 == 0:
+        print(f"Epoch {epoch+1}/{epochs}, Loss: {epoch_loss:.6f}")
+
+    if (epoch + 1)%20 == 0:
+        pred_img = generate_image_from_model(model, dataset.width, dataset.height)
+        plt.imshow(pred_img, cmap = 'gray')
+        plt.title(f"Epoch {epoch + 1}")
+        plt.axis('off')
+        plt.show()
