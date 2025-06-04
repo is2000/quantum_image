@@ -36,6 +36,7 @@ class ImageRegressionDataset(Dataset):
         # Load image as grayscale
         img = Image.open(image_path).convert('L')  # 'L' mode = grayscale
         img = img.resize((32, 32))  # Optional, if needed
+    #    plt.imshow(img)
         img = np.asarray(img, dtype=np.float32) / 255.0
 
         self.height, self.width = img.shape
@@ -73,6 +74,7 @@ for epoch in range(epochs):
     for inputs, targets in dataloader:
         targets = targets.view(-1, 1).float()
         optimizer.zero_grad()
+        inputs = inputs.detach()
         outputs = model(inputs)
         loss = criterion(outputs, targets)
         loss.backward()
@@ -83,7 +85,7 @@ for epoch in range(epochs):
     if (epoch + 1)%10 == 0:
         print(f"Epoch {epoch+1}/{epochs}, Loss: {epoch_loss:.6f}")
 
-    if (epoch + 1)%20 == 0:
+    if (epoch + 1)%100 == 0:
         pred_img = generate_image_from_model(model, dataset.width, dataset.height)
         plt.imshow(pred_img, cmap = 'gray')
         plt.title(f"Epoch {epoch + 1}")
