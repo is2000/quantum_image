@@ -35,9 +35,10 @@ class ImageRegressionDataset(Dataset):
     def __init__(self, image_path):
         # Load image as grayscale
         img = Image.open(image_path).convert('L')  # 'L' mode = grayscale
-        img = img.resize((32, 32))  # Optional, if needed
-    #    plt.imshow(img)
-        img = np.asarray(img, dtype=np.float32) / 255.0
+        img = img.resize((64, 64))  # Optional, if needed
+       # img.show()
+        img.save("resized_image.png")
+        img = np.asarray(img, dtype=np.float64) / 255.0
 
         self.height, self.width = img.shape
         self.data = []
@@ -91,3 +92,4 @@ for epoch in range(epochs):
         plt.title(f"Epoch {epoch + 1}")
         plt.axis('off')
         plt.show()
+        plt.savefig("predicted_image.png")
