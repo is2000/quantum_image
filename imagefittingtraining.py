@@ -3,6 +3,8 @@ from imagefitting1 import quantum_circuit
 import torch
 from torch import nn
 import torch.optim as optim
+from torch.optim import Adam
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 import numpy as np
 from PIL import Image
@@ -35,10 +37,10 @@ class ImageRegressionDataset(Dataset):
     def __init__(self, image_path):
         # Load image as grayscale
         img = Image.open(image_path).convert('L')  # 'L' mode = grayscale
-        img = img.resize((64, 64))  # Optional, if needed
+        img = img.resize((64, 64)) 
        # img.show()
         img.save("resized_image.png")
-        img = np.asarray(img, dtype=np.float64) / 255.0
+        img = np.asarray(img, dtype=np.float32) / 255.0
 
         self.height, self.width = img.shape
         self.data = []
@@ -66,6 +68,7 @@ dataloader = DataLoader(dataset, batch_size=64, shuffle=True)
 model = HybridImageFittingModel()
 criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=0.01)
+scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10, verbose=True)
 
 epochs = 100
 
@@ -81,6 +84,7 @@ for epoch in range(epochs):
         loss.backward()
         optimizer.step()
         running_loss += loss.item()
+        scheduler.step(loss.item())
 
     epoch_loss = running_loss / len(dataset)
     if (epoch + 1)%10 == 0:
