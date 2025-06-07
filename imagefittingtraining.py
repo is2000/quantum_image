@@ -68,7 +68,7 @@ dataloader = DataLoader(dataset, batch_size=64, shuffle=True)
 model = HybridImageFittingModel()
 criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=0.01)
-scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10, verbose=True)
+scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10)
 
 epochs = 100
 
