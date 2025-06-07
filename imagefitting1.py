@@ -3,22 +3,29 @@ from pennylane import qnn
 import torch
 from torch import nn
 import functools
+from pennylane import StronglyEntanglingLayers
 
 dev = qml.device("default.qubit", wires = 6)
 @qml.qnode(dev, interface="torch", diff_method="backprop")
 def quantum_circuit(inputs, weights):
-    for layer in range(weights.shape[0]):
+    '''for layer in range(weights.shape[0]):
         for i in range(6):    
             qml.RY(inputs[i], wires=i)
 
         for i in range(5):
             qml.CNOT(wires=[i, i+1])
-            qml.RY(inputs[i] + inputs[i+1], wires=i+1)
+            qml.RY(inputs[i] + inputs[i+1], wires=i+1)s
             qml.CNOT(wires=[i+1, i])
 
         # Variational layer
         for i in range(6):
             qml.Rot(weights[layer][i][0], weights[layer][i][1], weights[layer][i][2], wires=i)
+        '''
+
+    for i in range(len(inputs)):
+        qml.RY(inputs[i], wires = i)
+
+    StronglyEntanglingLayers(weights, wires=range(6))    
 
     return [qml.expval(qml.PauliZ(i)) for i in range(6)]
 
