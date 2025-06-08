@@ -48,8 +48,8 @@ class ImageRegressionDataset(Dataset):
         # Generate (x, y) coordinates and corresponding pixel values
         for y in range(self.height):
             for x in range(self.width):
-                norm_x = x / (self.width - 1)
-                norm_y = y / (self.height - 1)
+                norm_x = x / (self.width-1)
+                norm_y = y / (self.height-1)
                 pixel_val = img[y, x]
                 self.data.append(((norm_x, norm_y), pixel_val))
 
@@ -78,15 +78,17 @@ for epoch in range(epochs):
     for inputs, targets in dataloader:
         targets = targets.view(-1, 1).float()
         optimizer.zero_grad()
-        inputs = inputs.detach()
+        #inputs = inputs.detach()
         outputs = model(inputs)
         loss = criterion(outputs, targets)
         loss.backward()
         optimizer.step()
         running_loss += loss.item()
-        scheduler.step(loss.item())
+        #scheduler.step(loss.item())
 
-    epoch_loss = running_loss / len(dataset)
+    epoch_loss = running_loss / len(dataloader)
+    scheduler.step(epoch_loss)
+
     if (epoch + 1)%10 == 0:
         print(f"Epoch {epoch+1}/{epochs}, Loss: {epoch_loss:.6f}")
 
