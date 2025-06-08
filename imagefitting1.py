@@ -11,12 +11,16 @@ def quantum_circuit(inputs, weights1, weights2):
     n_layers = weights1.shape[0]
     n_qubits = inputs.shape[0]
 
-    for i in range(n_layers):
-        qml.StronglyEntanglingLayers(weights1, wires=range(n_qubits), imprimitive=qml.CNOT)
+    #for i in range(n_layers):
+     #   qml.StronglyEntanglingLayers(weights1, wires=range(n_qubits), imprimitive=qml.CNOT)
 
+    #encoding
     for j in range(n_qubits):
-        qml.RZ(inputs[j], wires=j)
-    
+    #    qml.RZ(inputs[j], wires=j)
+        qml.RY(inputs[j]**2, wires=j)
+
+    #variational
+    qml.StronglyEntanglingLayers(weights1, wires=range(n_qubits), imprimitive=qml.CNOT)
     qml.StronglyEntanglingLayers(weights2, wires=range(n_qubits), imprimitive=qml.CZ)
 
     return [qml.expval(qml.PauliZ(j)) for j in range(n_qubits)]
@@ -71,7 +75,7 @@ class HybridImageFittingModel(nn.Module):
         return qout'''
 
     def forward(self, x):
-        x = x.detach().requires_grad_(False)
+        #x = x.detach().requires_grad_(False)
         x = self.flatten(x)
         x = self.linear1(x)
         x = self.bn1(x)
