@@ -7,8 +7,24 @@ from pennylane import StronglyEntanglingLayers
 
 dev = qml.device("default.qubit", wires = 6)
 @qml.qnode(dev, interface="torch", diff_method="backprop")
-def quantum_circuit(inputs, weights):
-    '''for layer in range(weights.shape[0]):
+def quantum_circuit(inputs, weights1, weights2):
+    n_layers = weights1.shape[0]
+    n_qubits = inputs.shape[0]
+
+    for i in range(n_layers):
+        qml.StronglyEntanglingLayers(weights1, wires=range(n_qubits), imprimitive=qml.CNOT)
+
+    for j in range(n_qubits):
+        qml.RZ(inputs[j], wires=j)
+    
+    qml.StronglyEntanglingLayers(weights2, wires=range(n_qubits), imprimitive=qml.CZ)
+
+    return [qml.expval(qml.PauliZ(j)) for j in range(n_qubits)]
+
+#old function
+'''def quantum_circuit(inputs, weights):
+    #less complex and manual
+    for layer in range(weights.shape[0]):
         for i in range(6):    
             qml.RY(inputs[i], wires=i)
 
@@ -20,27 +36,31 @@ def quantum_circuit(inputs, weights):
         # Variational layer
         for i in range(6):
             qml.Rot(weights[layer][i][0], weights[layer][i][1], weights[layer][i][2], wires=i)
-        '''
-
+        
+    #more complex and automatic
     for i in range(len(inputs)):
         qml.RY(inputs[i], wires = i)
 
     StronglyEntanglingLayers(weights, wires=range(6))    
 
     return [qml.expval(qml.PauliZ(i)) for i in range(6)]
+'''
 
 class HybridImageFittingModel(nn.Module):
     def __init__(self):
         super().__init__()
+        self.n_qubits = 6
         self.n_layers = 3
-        weight_shapes = {"weights": (self.n_layers, 6, 3)}
+        
+        weight_shapes = {"weights1": (self.n_layers, self.n_qubits, 3), "weights2": (1, self.n_qubits, 3)}
         
         self.q_layer = qnn.TorchLayer(quantum_circuit, weight_shapes)
         self.flatten = nn.Flatten()
-        self.linear1 = nn.Linear(2,6)
-        self.bn1 = nn.BatchNorm1d(6)
+        
+        self.linear1 = nn.Linear(2,self.n_qubits)
+        self.bn1 = nn.BatchNorm1d(self.n_qubits)
         #self.qparams = nn.Parameter(torch.randn(6, 3))
-        self.linear2 = nn.Linear(6,1)
+        self.linear2 = nn.Linear(self.n_qubits,1)
     
     '''def quantum_layer(self,x):
         qout = []
