@@ -27,7 +27,7 @@ dataloader = DataLoader(dataset, batch_size=64, shuffle=True)
 
 def generate_image_from_model(model, width, height):
     model.eval()
-    coords = [(x / width, y / height) for y in range(height) for x in range(width)]
+    coords = [(2 * (x / (width - 1)) - 1, 2 * (y / (height - 1)) - 1) for y in range(height) for x in range(width)]
     coords_tensor = torch.tensor(coords, dtype=torch.float32)
     with torch.no_grad():
         preds = model(coords_tensor).view(height, width).cpu().numpy()
@@ -37,10 +37,11 @@ class ImageRegressionDataset(Dataset):
     def __init__(self, image_path):
         # Load image as grayscale
         img = Image.open(image_path).convert('L')  # 'L' mode = grayscale
-        img = img.resize((64, 64)) 
+        img = img.resize((32, 32)) 
        # img.show()
+        plt.imshow(img, cmap='gray')
         img.save("resized_image.png")
-        img = np.asarray(img, dtype=np.float32) / 255.0
+        img = (np.asarray(img, dtype=np.float32) / 127.5) -1
 
         self.height, self.width = img.shape
         self.data = []
@@ -48,8 +49,8 @@ class ImageRegressionDataset(Dataset):
         # Generate (x, y) coordinates and corresponding pixel values
         for y in range(self.height):
             for x in range(self.width):
-                norm_x = x / (self.width-1)
-                norm_y = y / (self.height-1)
+                norm_x = 2 * (x / (self.width-1)) -1
+                norm_y = 2 * (y / (self.height-1)) -1
                 pixel_val = img[y, x]
                 self.data.append(((norm_x, norm_y), pixel_val))
 
@@ -62,12 +63,12 @@ class ImageRegressionDataset(Dataset):
 
 from torch.utils.data import DataLoader
 
-dataset = ImageRegressionDataset("/home/ishita/Desktop/quantum/trial code/image.png")
-dataloader = DataLoader(dataset, batch_size=64, shuffle=True)
+dataset = ImageRegressionDataset("/home/ishita/Desktop/quantum/trial code/tray_image.png")
+dataloader = DataLoader(dataset, batch_size=128, shuffle=True)
 
 model = HybridImageFittingModel()
 criterion = nn.MSELoss()
-optimizer = optim.Adam(model.parameters(), lr=0.01)
+optimizer = optim.Adam(model.parameters(), lr=0.001)
 scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10)
 
 epochs = 100
