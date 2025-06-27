@@ -5,10 +5,24 @@ from torch import nn
 import functools
 from pennylane import StronglyEntanglingLayers
 
+n_qubits = 6
+n_layers = 3
+
 dev = qml.device("default.qubit", wires = 6)
-@qml.qnode(dev, interface="torch", diff_method="backprop")
+
+@qml.qnode(dev, interface="torch")
 def quantum_circuit(inputs, weights1, weights2):
-    n_layers = weights1.shape[0]
+    for i in range(n_layers):
+        qml.StronglyEntanglingLayers(weights1[i], wires=range(n_qubits), imprimitive=qml.CZ)
+        for j in range(n_qubits):
+            qml.RZ(inputs[j], wires = j)
+        
+    qml.StronglyEntanglingLayers(weights2, wires=range(n_qubits), imprimitive=qml.CZ)
+    return [qml.expval(qml.PauliZ(j)) for j in range(n_qubits)]
+
+#old function2
+'''def quantum_circuit(inputs, weights1, weights2):
+    #n_layers = weights1.shape[0]
     n_qubits = inputs.shape[0]
 
     #for i in range(n_layers):
@@ -24,8 +38,9 @@ def quantum_circuit(inputs, weights1, weights2):
     qml.StronglyEntanglingLayers(weights2, wires=range(n_qubits), imprimitive=qml.CZ)
 
     return [qml.expval(qml.PauliZ(j)) for j in range(n_qubits)]
+'''
 
-#old function
+#old function1
 '''def quantum_circuit(inputs, weights):
     #less complex and manual
     for layer in range(weights.shape[0]):
@@ -56,7 +71,7 @@ class HybridImageFittingModel(nn.Module):
         self.n_qubits = 6
         self.n_layers = 3
         
-        weight_shapes = {"weights1": (self.n_layers, self.n_qubits, 3), "weights2": (1, self.n_qubits, 3)}
+        weight_shapes = {"weights1": (n_layers, 2, n_qubits, 3), "weights2": (2, self.n_qubits, 3)}
         
         self.q_layer = qnn.TorchLayer(quantum_circuit, weight_shapes)
         self.flatten = nn.Flatten()
