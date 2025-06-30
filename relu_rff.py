@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 # Load image (grayscale)
 img_path = "/home/ishita/Desktop/quantum/trial code/tray_image.png"
 img = Image.open(img_path).convert('L') 
-img = img.resize((16, 16))
+img = img.resize((64, 64))
 img_array = np.array(img) / 255.0
 
 # (x, y) coordinate grid
@@ -28,36 +28,44 @@ dataset = TensorDataset(coords_tensor, targets_tensor)
 dataloader = DataLoader(dataset, batch_size=64, shuffle=True)
 
 class RFFReLURegression(nn.Module):
-    def __init__(self, input_dim=2, rff_dim=256, output_dim=1, sigma=0.1):
+    def __init__(self, input_dim=2, rff_dim=256, output_dim=1, sigma=0.1, hidden_dims=[128, 64]): # Added hidden_dims
         super().__init__()
         self.input_dim = input_dim
         self.rff_dim = rff_dim
         self.output_dim = output_dim
         self.sigma = sigma
 
-        # Sample random weights and bias for RFF mapping
         self.register_buffer("W", torch.randn(input_dim, rff_dim) / sigma)
         self.register_buffer("b", 2 * np.pi * torch.rand(rff_dim))
 
-        # Layers
-        self.relu = nn.ReLU()
-        self.output_layer = nn.Linear(rff_dim, output_dim)
+        layers = []
+        # First activation after RFF
+        layers.append(nn.Linear(rff_dim, hidden_dims[0])) # From rff_dim to first hidden layer
+        layers.append(nn.ReLU())
+
+        # Add more hidden layers
+        for i in range(len(hidden_dims) - 1):
+            layers.append(nn.Linear(hidden_dims[i], hidden_dims[i+1]))
+            layers.append(nn.ReLU())
+
+        self.hidden_layers = nn.Sequential(*layers)
+        self.output_layer = nn.Linear(hidden_dims[-1], output_dim) # From last hidden layer to output
 
     def rff_mapping(self, x):
-        projection = x @ self.W + self.b  # shape: [batch_size, rff_dim]
+        projection = x @ self.W + self.b
         return torch.cos(projection) * np.sqrt(2.0 / self.rff_dim)
 
     def forward(self, x):
-        # x: [batch_size, 2] (e.g., x, y coordinates)
-        rff_feats = self.rff_mapping(x)  # [batch_size, rff_dim]
-        activated = self.relu(rff_feats)
-        return self.output_layer(activated)  # [batch_size, 1]
+        rff_feats = self.rff_mapping(x)
+        # The first ReLU after RFF is now part of self.hidden_layers
+        activated = self.hidden_layers(rff_feats)
+        return self.output_layer(activated)
 
 model = RFFReLURegression(rff_dim=512, sigma=0.2)
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
-for epoch in range(300):
+for epoch in range(250):
     total_loss = 0.0
     for batch_x, batch_y in dataloader:
         optimizer.zero_grad()

@@ -37,7 +37,7 @@ class ImageRegressionDataset(Dataset):
     def __init__(self, image_path):
         # Load image as grayscale
         img = Image.open(image_path).convert('L')  # 'L' mode = grayscale
-        img = img.resize((32, 32)) 
+        img = img.resize((15, 16)) 
        # img.show()
         plt.imshow(img, cmap='gray')
         img.save("resized_image.png")
@@ -63,7 +63,7 @@ class ImageRegressionDataset(Dataset):
 
 from torch.utils.data import DataLoader
 
-dataset = ImageRegressionDataset("/home/ishita/Desktop/quantum/trial code/tray_image.png")
+dataset = ImageRegressionDataset("/home/ishita/Desktop/quantum/trial code/image.png")
 dataloader = DataLoader(dataset, batch_size=128, shuffle=True)
 
 model = HybridImageFittingModel()

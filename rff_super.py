@@ -39,8 +39,8 @@ def compute_psnr(original, reconstructed, max_val=1.0):
 # -------------------------------
 # Load and Prepare Data
 # -------------------------------
-def prepare_data(img_path, low_res_size=(8, 8), high_res_size=(16, 16)):
-    # Load high-res ground truth
+def prepare_data(img_path, low_res_size=(8, 8), high_res_size=(128, 128)):
+    # Load high-res ground truth image at desired resolution
     hr_img = Image.open(img_path).convert('L').resize(high_res_size)
     hr_array = np.array(hr_img, dtype=np.float32) / 255.0
 
@@ -48,7 +48,7 @@ def prepare_data(img_path, low_res_size=(8, 8), high_res_size=(16, 16)):
     lr_img = hr_img.resize(low_res_size, resample=Image.BICUBIC)
     lr_array = np.array(lr_img, dtype=np.float32) / 255.0
 
-    # Prepare coordinates and targets
+    # Prepare low-res coordinates and targets
     H_lr, W_lr = lr_array.shape
     xs_lr = np.linspace(0, 1, W_lr)
     ys_lr = np.linspace(0, 1, H_lr)
@@ -63,16 +63,23 @@ def prepare_data(img_path, low_res_size=(8, 8), high_res_size=(16, 16)):
 # Main Super-Resolution Pipeline
 # -------------------------------
 def run_super_resolution(img_path):
-    coords_lr, targets_lr, hr_array = prepare_data(img_path)
+    # Prepare data
+    coords_lr, targets_lr, hr_array = prepare_data(img_path, low_res_size=(8, 8), high_res_size=(128, 128))
+
+    # Debug prints to check tensor shapes
+    print("coords_lr shape:", coords_lr.shape)   # Should be (64, 2) for 8x8
+    print("targets_lr shape:", targets_lr.shape) # Should be (64, 1)
 
     coords_tensor = torch.tensor(coords_lr, dtype=torch.float32)
     targets_tensor = torch.tensor(targets_lr, dtype=torch.float32)
     dataloader = DataLoader(TensorDataset(coords_tensor, targets_tensor), batch_size=32, shuffle=True)
 
+    # Initialize model, optimizer, loss
     model = RFFReLURegression()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     loss_fn = nn.MSELoss()
 
+    # Training loop
     for epoch in range(300):
         total_loss = 0
         for x_batch, y_batch in dataloader:
@@ -85,8 +92,8 @@ def run_super_resolution(img_path):
         if epoch % 50 == 0:
             print(f"Epoch {epoch}, Loss: {total_loss:.4f}")
 
-    # Predict on high-res grid
-    H_hr, W_hr = hr_array.shape
+    # Predict on high-res grid (128x128)
+    H_hr, W_hr = 128, 128
     xs_hr = np.linspace(0, 1, W_hr)
     ys_hr = np.linspace(0, 1, H_hr)
     xx_hr, yy_hr = np.meshgrid(xs_hr, ys_hr)
@@ -96,20 +103,21 @@ def run_super_resolution(img_path):
     with torch.no_grad():
         preds_hr = model(coords_hr_tensor).numpy().reshape(H_hr, W_hr)
 
-    # PSNR
+    # Compute PSNR against ground truth 128x128 image
     psnr = compute_psnr(hr_array, preds_hr)
     print(f"\nPSNR of Super-Resolved Image: {psnr:.2f} dB")
 
     # Visualization
     plt.figure(figsize=(12, 4))
     plt.subplot(1, 3, 1)
-    plt.title("Original HR")
+    plt.title("Original HR (128x128)")
     plt.imshow(hr_array, cmap='gray')
     plt.axis('off')
 
     plt.subplot(1, 3, 2)
-    plt.title("Low-Res Input")
-    plt.imshow(Image.open(img_path).convert('L').resize((8, 8)), cmap='gray')
+    plt.title("Low-Res Input (8x8)")
+    low_res_img = Image.open(img_path).convert('L').resize((8, 8))
+    plt.imshow(low_res_img, cmap='gray')
     plt.axis('off')
 
     plt.subplot(1, 3, 3)
@@ -125,4 +133,4 @@ def run_super_resolution(img_path):
 # Run
 # -------------------------------
 if __name__ == "__main__":
-    run_super_resolution("tray_image.png")  # ← Replace with your path
+    run_super_resolution("tray_image.png")  # Replace with your image path
