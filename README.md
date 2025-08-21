@@ -16,7 +16,6 @@ To run this project, you need to have the following installed on your system:
 
 * **Python 3.8 or higher**
 * **Jupyter Notebook** or **JupyterLab**
-* **The libraries listed in the `requirements.txt` file.**
 
 ### Installation
 
